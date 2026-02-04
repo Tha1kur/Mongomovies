@@ -108,11 +108,7 @@ fun SearchScreen(
                 onSortSelected = viewModel::updateSortOption,
                 onYearChanged = viewModel::updateYearFilter,
                 onRatingChanged = viewModel::updateMinRating,
-                onClearFilters = {
-                    viewModel.updateSortOption(SortOption.RELEVANCE)
-                    viewModel.updateYearFilter("")
-                    viewModel.updateMinRating(0f)
-                }
+                onClearFilters = { viewModel.clearFilters() }
             )
 
             Box(

@@ -26,6 +26,7 @@ class SearchViewModel(
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
     private var rawResults: List<Movie> = emptyList()
+    private val resultsCache = mutableMapOf<String, List<Movie>>()
 
     init {
         observeQuery()
@@ -61,6 +62,15 @@ class SearchViewModel(
         _uiState.value = SearchUiState()
     }
 
+    fun clearFilters() {
+        _uiState.value = _uiState.value.copy(
+            sortOption = SortOption.RELEVANCE,
+            yearFilter = "",
+            minRating = 0f
+        )
+        applyFilters()
+    }
+
     fun updateSortOption(option: SortOption) {
         _uiState.value = _uiState.value.copy(sortOption = option)
         applyFilters()
@@ -86,15 +96,30 @@ class SearchViewModel(
     }
 
     private suspend fun performSearch(query: String, isRefresh: Boolean) {
+        val trimmed = query.trim()
+        if (!isRefresh) {
+            resultsCache[trimmed]?.let { cached ->
+                rawResults = cached
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    isRefreshing = false,
+                    error = null
+                )
+                applyFilters()
+                return
+            }
+        }
+
         _uiState.value = _uiState.value.copy(
             isLoading = !isRefresh,
             isRefreshing = isRefresh,
             error = null
         )
 
-        val result = movieRepository.searchMovies(query)
+        val result = movieRepository.searchMovies(trimmed)
         if (result.isSuccess) {
             rawResults = result.getOrDefault(emptyList())
+            resultsCache[trimmed] = rawResults
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 isRefreshing = false,
