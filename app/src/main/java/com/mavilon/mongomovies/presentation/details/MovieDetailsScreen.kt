@@ -1,10 +1,15 @@
 package com.mavilon.mongomovies.presentation.details
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -37,11 +42,14 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -49,6 +57,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import com.mavilon.mongomovies.di.AppContainer
@@ -67,8 +76,7 @@ import com.mavilon.mongomovies.util.ImageUrlBuilder
 fun MovieDetailsScreen(
     movieId: Int,
     container: AppContainer,
-    onBackClick: () -> Unit,
-    onTrailerClick: (String) -> Unit = {}
+    onBackClick: () -> Unit
 ) {
     val viewModel = remember { container.createMovieDetailsViewModel(movieId) }
     val uiState by viewModel.uiState.collectAsState()
@@ -111,8 +119,7 @@ fun MovieDetailsScreen(
                     state = state,
                     padding = padding,
                     isInWatchlist = isInWatchlist,
-                    onToggleWatchlist = { viewModel.toggleWatchlist() },
-                    onTrailerClick = onTrailerClick
+                    onToggleWatchlist = { viewModel.toggleWatchlist() }
                 )
             }
             is MovieDetailsUiState.Error -> {
@@ -143,8 +150,7 @@ private fun MovieDetailsContent(
     state: MovieDetailsUiState.Success,
     padding: PaddingValues,
     isInWatchlist: Boolean,
-    onToggleWatchlist: () -> Unit,
-    onTrailerClick: (String) -> Unit
+    onToggleWatchlist: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -171,10 +177,7 @@ private fun MovieDetailsContent(
 
         if (state.videos.isNotEmpty()) {
             item {
-                TrailersSection(
-                    videos = state.videos,
-                    onTrailerClick = onTrailerClick
-                )
+                TrailersSection(videos = state.videos)
             }
         }
 
@@ -443,33 +446,40 @@ private fun SectionTitle(text: String) {
 }
 
 @Composable
-private fun TrailersSection(
-    videos: List<Video>,
-    onTrailerClick: (String) -> Unit
-) {
-    val trailerItems = videos.take(3)
+private fun TrailersSection(videos: List<Video>) {
+    val context = LocalContext.current
+
+    val youtubeVideos = remember(videos) {
+        videos
+            .filter { it.site.equals("YouTube", ignoreCase = true) && !it.key.isNullOrBlank() }
+            .sortedWith(
+                compareByDescending<Video> { it.official }
+                    .thenBy { it.type ?: "" }
+            )
+    }
+
+    var selectedKey by remember { mutableStateOf<String?>(youtubeVideos.firstOrNull()?.key) }
 
     Column(
         modifier = Modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SectionTitle(text = "Trailers")
+
+        // Thumbnails/list
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(trailerItems) { video ->
-                val youtubeKey = video
-                    .takeIf { it.site.equals("YouTube", ignoreCase = true) && !it.key.isNullOrBlank() }
-                    ?.key
+            items(youtubeVideos.take(6)) { video ->
+                val key = video.key ?: return@items
+                val isSelected = selectedKey == key
 
                 Card(
-                    onClick = {
-                        youtubeKey?.let(onTrailerClick)
-                    },
-                    enabled = youtubeKey != null,
+                    onClick = { selectedKey = key },
                     modifier = Modifier
-                        .width(220.dp)
-                        .height(120.dp),
+                        .width(240.dp)
+                        .height(96.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.secondaryContainer
                     )
                 ) {
                     Column(
@@ -480,14 +490,18 @@ private fun TrailersSection(
                     ) {
                         Text(
                             text = video.name,
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleSmall,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
                                 text = video.type ?: "Trailer",
-                                style = MaterialTheme.typography.labelMedium
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                             if (video.official) {
                                 Text(
@@ -499,6 +513,69 @@ private fun TrailersSection(
                         }
                     }
                 }
+            }
+        }
+
+        // Inline player (kept on details screen)
+        selectedKey?.let { key ->
+            InlineYoutubePlayer(
+                youtubeKey = key,
+                onOpenExternal = {
+                    val watchUrl = "https://www.youtube.com/watch?v=$key"
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(watchUrl)))
+                }
+            )
+        }
+    }
+}
+
+@Composable
+@SuppressLint("SetJavaScriptEnabled")
+private fun InlineYoutubePlayer(
+    youtubeKey: String,
+    onOpenExternal: () -> Unit
+) {
+    val embedUrl = "https://www.youtube.com/embed/$youtubeKey?autoplay=1&loop=1&playlist=$youtubeKey&modestbranding=1&rel=0"
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(16f / 9f),
+        shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { ctx ->
+                    WebView(ctx).apply {
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.mediaPlaybackRequiresUserGesture = false
+                        webChromeClient = WebChromeClient()
+                        webViewClient = WebViewClient()
+                        loadUrl(embedUrl)
+                    }
+                },
+                update = { webView ->
+                    val current = webView.url
+                    if (current == null || !current.contains(youtubeKey)) {
+                        webView.loadUrl(embedUrl)
+                    }
+                }
+            )
+
+            TextButton(
+                onClick = onOpenExternal,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+            ) {
+                Text("Open")
             }
         }
     }
