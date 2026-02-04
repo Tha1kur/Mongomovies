@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import com.mavilon.mongomovies.di.AppContainer
 import com.mavilon.mongomovies.domain.model.Movie
 import com.mavilon.mongomovies.presentation.components.MoviePosterCard
-import com.mavilon.mongomovies.presentation.components.RatingPill
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -165,22 +164,6 @@ private fun WatchlistMovieGridCard(
             }
         }
 
-        // Quick glance rating at bottom-start
-        Surface(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(8.dp),
-            shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-            tonalElevation = 2.dp
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RatingPill(rating = movie.voteAverage)
-            }
-        }
     }
 }
 
