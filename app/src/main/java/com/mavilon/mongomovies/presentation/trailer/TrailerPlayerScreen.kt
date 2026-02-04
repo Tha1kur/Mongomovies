@@ -33,7 +33,8 @@ fun TrailerPlayerScreen(
 ) {
     val context = LocalContext.current
     val watchUrl = "https://www.youtube.com/watch?v=$youtubeKey"
-    val embedUrl = "https://www.youtube.com/embed/$youtubeKey?autoplay=1&modestbranding=1&rel=0"
+    // YouTube embed looping requires both loop=1 and playlist=<videoId>
+    val embedUrl = "https://www.youtube.com/embed/$youtubeKey?autoplay=1&loop=1&playlist=$youtubeKey&modestbranding=1&rel=0"
 
     Scaffold(
         topBar = {
