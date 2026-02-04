@@ -2,6 +2,7 @@ package com.mavilon.mongomovies.presentation.details
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -29,11 +30,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Surface
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -50,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -482,33 +486,61 @@ private fun TrailersSection(videos: List<Video>) {
                         else MaterialTheme.colorScheme.secondaryContainer
                     )
                 ) {
-                    Column(
+                    Row(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(12.dp),
-                        verticalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = video.name,
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .width(18.dp)
+                                    .height(18.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = video.type ?: "Trailer",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                text = video.name,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            if (video.official) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
-                                    text = "Official",
+                                    text = video.type ?: "Trailer",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
+                                if (video.official) {
+                                    Text(
+                                        text = "Official",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                if (isSelected) {
+                                    Text(
+                                        text = "Now playing",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
                     }
@@ -542,33 +574,54 @@ private fun InlineYoutubePlayer(
     val playlistParam = playlistKeys.distinct().joinToString(",")
     val embedUrl = "https://www.youtube.com/embed/$youtubeKey?autoplay=1&playsinline=1&mute=1&modestbranding=1&rel=0&playlist=$playlistParam"
 
+    var isLoading by remember(youtubeKey) { mutableStateOf(true) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(16f / 9f),
         shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
             AndroidView(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(14.dp)),
                 factory = { ctx ->
                     WebView(ctx).apply {
+                        setBackgroundColor(AndroidColor.BLACK)
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
                         settings.mediaPlaybackRequiresUserGesture = false
                         webChromeClient = WebChromeClient()
-                        webViewClient = WebViewClient()
+                        webViewClient = object : WebViewClient() {
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                isLoading = false
+                            }
+                        }
                         loadUrl(embedUrl)
                     }
                 },
                 update = { webView ->
                     val current = webView.url
                     if (current == null || !current.contains(youtubeKey)) {
+                        isLoading = true
                         webView.loadUrl(embedUrl)
                     }
                 }
             )
+
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
 
             Column(
                 modifier = Modifier
@@ -587,7 +640,7 @@ private fun InlineYoutubePlayer(
                     Text("Open")
                 }
                 Text(
-                    text = "Plays muted • tap video to unmute",
+                    text = "Autoplays muted • tap video to unmute",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
                     modifier = Modifier

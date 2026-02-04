@@ -19,10 +19,15 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -101,30 +106,93 @@ fun SearchScreen(
                 singleLine = true
             )
 
-            FilterRow(
-                sortOption = uiState.sortOption,
-                yearFilter = uiState.yearFilter,
-                minRating = uiState.minRating,
-                onSortSelected = viewModel::updateSortOption,
-                onYearChanged = viewModel::updateYearFilter,
-                onRatingChanged = viewModel::updateMinRating,
-                onClearFilters = { viewModel.clearFilters() }
-            )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    FilterRow(
+                        sortOption = uiState.sortOption,
+                        yearFilter = uiState.yearFilter,
+                        minRating = uiState.minRating,
+                        onSortSelected = viewModel::updateSortOption,
+                        onYearChanged = viewModel::updateYearFilter,
+                        onRatingChanged = viewModel::updateMinRating,
+                        onClearFilters = { viewModel.clearFilters() }
+                    )
 
-            if (uiState.query.length >= 2 && uiState.error == null) {
-                val parts = buildList {
-                    add("Showing ${uiState.results.size}")
-                    add("Order: ${uiState.sortOption.label}")
-                    uiState.yearFilter.toIntOrNull()?.let { add("Year: $it") }
-                    if (uiState.minRating > 0f) add("Min ★ ${String.format("%.1f", uiState.minRating)}")
+                    if (uiState.query.length >= 2 && uiState.error == null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AssistChip(
+                                onClick = { /* no-op */ },
+                                label = { Text("${uiState.results.size} results") },
+                                leadingIcon = {
+                                    if (uiState.isLoading || uiState.isRefreshing) {
+                                        CircularProgressIndicator(
+                                            strokeWidth = 2.dp,
+                                            modifier = Modifier
+                                                .width(16.dp)
+                                                .height(16.dp)
+                                        )
+                                    }
+                                },
+                                enabled = false,
+                                colors = AssistChipDefaults.assistChipColors(
+                                    disabledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                                    disabledLabelColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+
+                            AssistChip(
+                                onClick = { /* no-op */ },
+                                label = { Text("Order: ${uiState.sortOption.label}") },
+                                leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null) },
+                                enabled = false,
+                                colors = AssistChipDefaults.assistChipColors(
+                                    disabledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                                    disabledLabelColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+
+                            uiState.yearFilter.toIntOrNull()?.let { year ->
+                                AssistChip(
+                                    onClick = { /* no-op */ },
+                                    label = { Text("Year: $year") },
+                                    enabled = false,
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        disabledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                                        disabledLabelColor = MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
+                            }
+
+                            if (uiState.minRating > 0f) {
+                                AssistChip(
+                                    onClick = { /* no-op */ },
+                                    label = { Text("Min ★ ${String.format("%.1f", uiState.minRating)}") },
+                                    enabled = false,
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        disabledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                                        disabledLabelColor = MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
+                            }
+                        }
+                    }
                 }
-                Text(
-                    text = parts.joinToString("  •  "),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Box(
                 modifier = Modifier
@@ -198,11 +266,7 @@ private fun FilterRow(
     onRatingChanged: (Float) -> Unit,
     onClearFilters: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth(),
