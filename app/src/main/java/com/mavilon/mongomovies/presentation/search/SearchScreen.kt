@@ -263,10 +263,15 @@ private fun SortDropdown(
             label = { Text("Order") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded },
+            modifier = Modifier.fillMaxWidth(),
             singleLine = true
+        )
+
+        // Click-catcher overlay (OutlinedTextField can consume clicks)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable { expanded = !expanded }
         )
 
         DropdownMenu(
