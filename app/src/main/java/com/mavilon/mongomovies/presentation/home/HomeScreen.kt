@@ -117,7 +117,7 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         edgePadding = 16.dp,
                         indicator = { tabPositions ->
-                            TabRowDefaults.Indicator(
+                            TabRowDefaults.SecondaryIndicator(
                                 Modifier.tabIndicatorOffset(tabPositions[selectedCategory.ordinal])
                             )
                         },

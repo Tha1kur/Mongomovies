@@ -17,7 +17,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -73,7 +73,7 @@ fun SearchScreen(
                 title = { Text("Search Movies") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 }
             )
@@ -107,7 +107,12 @@ fun SearchScreen(
                 minRating = uiState.minRating,
                 onSortSelected = viewModel::updateSortOption,
                 onYearChanged = viewModel::updateYearFilter,
-                onRatingChanged = viewModel::updateMinRating
+                onRatingChanged = viewModel::updateMinRating,
+                onClearFilters = {
+                    viewModel.updateSortOption(SortOption.RELEVANCE)
+                    viewModel.updateYearFilter("")
+                    viewModel.updateMinRating(0f)
+                }
             )
 
             Box(
@@ -179,7 +184,8 @@ private fun FilterRow(
     minRating: Float,
     onSortSelected: (SortOption) -> Unit,
     onYearChanged: (String) -> Unit,
-    onRatingChanged: (Float) -> Unit
+    onRatingChanged: (Float) -> Unit,
+    onClearFilters: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -188,7 +194,8 @@ private fun FilterRow(
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             SortDropdown(
                 selected = sortOption,
@@ -197,11 +204,20 @@ private fun FilterRow(
             )
             OutlinedTextField(
                 value = yearFilter,
-                onValueChange = { input -> onYearChanged(input.take(4)) },
+                onValueChange = { input -> onYearChanged(input.filter { it.isDigit() }.take(4)) },
                 label = { Text("Year") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.width(120.dp)
+            )
+
+            Text(
+                text = "Clear",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clickable { onClearFilters() }
+                    .padding(horizontal = 4.dp, vertical = 8.dp)
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
