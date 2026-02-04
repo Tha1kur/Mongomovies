@@ -520,6 +520,7 @@ private fun TrailersSection(videos: List<Video>) {
         selectedKey?.let { key ->
             InlineYoutubePlayer(
                 youtubeKey = key,
+                playlistKeys = youtubeVideos.mapNotNull { it.key },
                 onOpenExternal = {
                     val watchUrl = "https://www.youtube.com/watch?v=$key"
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(watchUrl)))
@@ -533,9 +534,13 @@ private fun TrailersSection(videos: List<Video>) {
 @SuppressLint("SetJavaScriptEnabled")
 private fun InlineYoutubePlayer(
     youtubeKey: String,
+    playlistKeys: List<String>,
     onOpenExternal: () -> Unit
 ) {
-    val embedUrl = "https://www.youtube.com/embed/$youtubeKey?autoplay=1&loop=1&playlist=$youtubeKey&modestbranding=1&rel=0"
+    // Autoplay is often blocked unless muted. This is the closest to “video-first” UX without native deps.
+    // The playlist parameter enables continuous play across the provided keys.
+    val playlistParam = playlistKeys.distinct().joinToString(",")
+    val embedUrl = "https://www.youtube.com/embed/$youtubeKey?autoplay=1&playsinline=1&mute=1&modestbranding=1&rel=0&playlist=$playlistParam"
 
     Card(
         modifier = Modifier
@@ -565,17 +570,33 @@ private fun InlineYoutubePlayer(
                 }
             )
 
-            TextButton(
-                onClick = onOpenExternal,
+            Column(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .background(
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                        shape = RoundedCornerShape(10.dp)
-                    )
+                    .padding(8.dp),
+                horizontalAlignment = Alignment.End
             ) {
-                Text("Open")
+                TextButton(
+                    onClick = onOpenExternal,
+                    modifier = Modifier
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                ) {
+                    Text("Open")
+                }
+                Text(
+                    text = "Plays muted • tap video to unmute",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                    modifier = Modifier
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.65f),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                )
             }
         }
     }

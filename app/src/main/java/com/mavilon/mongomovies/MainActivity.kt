@@ -11,11 +11,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.mavilon.mongomovies.presentation.navigation.BottomNavigationBar
 import com.mavilon.mongomovies.presentation.navigation.NavGraph
 import com.mavilon.mongomovies.presentation.navigation.Screen
-import com.mavilon.mongomovies.ui.theme.BackgroundPrimary
 import com.mavilon.mongomovies.ui.theme.MongomoviesTheme
 
 class MainActivity : ComponentActivity() {
@@ -27,12 +25,6 @@ class MainActivity : ComponentActivity() {
         
         setContent {
             MongomoviesTheme {
-                val systemUiController = rememberSystemUiController()
-                systemUiController.setSystemBarsColor(
-                    color = BackgroundPrimary,
-                    darkIcons = false
-                )
-                
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route

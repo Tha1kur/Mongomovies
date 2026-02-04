@@ -131,9 +131,6 @@ dependencies {
     // DataStore
     implementation(libs.androidx.datastore.preferences)
     
-    // Accompanist
-    implementation(libs.accompanist.systemuicontroller)
-    
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

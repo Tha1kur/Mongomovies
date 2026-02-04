@@ -27,14 +27,10 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun MongomoviesTheme(
-    darkTheme: Boolean = true, // Always dark theme for this app
-    dynamicColor: Boolean = false, // Disable dynamic color to maintain design
     content: @Composable () -> Unit
 ) {
-    val colorScheme = DarkColorScheme
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = DarkColorScheme,
         typography = Typography,
         content = content
     )
