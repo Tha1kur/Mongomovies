@@ -5,6 +5,7 @@ import com.mavilon.mongomovies.domain.model.Cast
 import com.mavilon.mongomovies.domain.model.Movie
 import com.mavilon.mongomovies.domain.model.MovieDetails
 import com.mavilon.mongomovies.domain.model.Review
+import com.mavilon.mongomovies.domain.model.Video
 import kotlinx.coroutines.flow.Flow
 
 interface MovieRepository {
@@ -12,8 +13,9 @@ interface MovieRepository {
     fun getUpcomingMovies(): Flow<PagingData<Movie>>
     fun getTopRatedMovies(): Flow<PagingData<Movie>>
     fun getPopularMovies(): Flow<PagingData<Movie>>
-    fun searchMovies(query: String): Flow<PagingData<Movie>>
+    suspend fun searchMovies(query: String, maxPages: Int = 5): Result<List<Movie>>
     suspend fun getMovieDetails(id: Int): Result<MovieDetails>
     suspend fun getMovieCredits(id: Int): Result<List<Cast>>
     suspend fun getMovieReviews(id: Int): Result<List<Review>>
+    suspend fun getMovieVideos(id: Int): Result<List<Video>>
 }

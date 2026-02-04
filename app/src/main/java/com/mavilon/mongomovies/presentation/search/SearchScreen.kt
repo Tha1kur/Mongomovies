@@ -1,22 +1,57 @@
 package com.mavilon.mongomovies.presentation.search
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.paging.LoadState
-import androidx.paging.compose.collectAsLazyPagingItems
 import com.mavilon.mongomovies.di.AppContainer
 import com.mavilon.mongomovies.domain.model.Movie
+import com.mavilon.mongomovies.presentation.components.MoviePosterCard
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     container: AppContainer,
@@ -24,9 +59,14 @@ fun SearchScreen(
     onBackClick: () -> Unit
 ) {
     val viewModel = remember { container.createSearchViewModel() }
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val searchResults = viewModel.searchResults.collectAsLazyPagingItems()
-    
+    val uiState by viewModel.uiState.collectAsState()
+
+    val isRefreshing = uiState.isRefreshing || (uiState.isLoading && uiState.results.isEmpty())
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = isRefreshing,
+        onRefresh = { viewModel.refresh() }
+    )
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -44,16 +84,15 @@ fun SearchScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Search bar
             OutlinedTextField(
-                value = searchQuery,
+                value = uiState.query,
                 onValueChange = { viewModel.updateSearchQuery(it) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
                 placeholder = { Text("Search for movies...") },
                 trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
+                    if (uiState.query.isNotEmpty()) {
                         IconButton(onClick = { viewModel.clearSearch() }) {
                             Icon(Icons.Default.Clear, "Clear")
                         }
@@ -61,23 +100,160 @@ fun SearchScreen(
                 },
                 singleLine = true
             )
-            
-            // Search results
-            when {
-                searchQuery.isEmpty() -> {
-                    EmptySearchState()
-                }
-                searchQuery.length < 2 -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Type at least 2 characters to search")
+
+            FilterRow(
+                sortOption = uiState.sortOption,
+                yearFilter = uiState.yearFilter,
+                minRating = uiState.minRating,
+                onSortSelected = viewModel::updateSortOption,
+                onYearChanged = viewModel::updateYearFilter,
+                onRatingChanged = viewModel::updateMinRating
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pullRefresh(pullRefreshState)
+            ) {
+                when {
+                    uiState.query.isEmpty() -> EmptySearchState()
+                    uiState.query.length < 2 -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Type at least 2 characters to search")
+                        }
+                    }
+                    uiState.isLoading && uiState.results.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    uiState.error != null -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Error: ${uiState.error}",
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(onClick = { viewModel.refresh() }) {
+                                    Text("Retry")
+                                }
+                            }
+                        }
+                    }
+                    uiState.results.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No results found")
+                        }
+                    }
+                    else -> {
+                        SearchResultsGrid(uiState.results, onMovieClick)
                     }
                 }
-                else -> {
-                    SearchResultsGrid(searchResults, onMovieClick)
-                }
+                PullRefreshIndicator(
+                    refreshing = isRefreshing,
+                    state = pullRefreshState,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterRow(
+    sortOption: SortOption,
+    yearFilter: String,
+    minRating: Float,
+    onSortSelected: (SortOption) -> Unit,
+    onYearChanged: (String) -> Unit,
+    onRatingChanged: (Float) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            SortDropdown(
+                selected = sortOption,
+                onSelected = onSortSelected,
+                modifier = Modifier.weight(1f)
+            )
+            OutlinedTextField(
+                value = yearFilter,
+                onValueChange = { input -> onYearChanged(input.take(4)) },
+                label = { Text("Year") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.width(120.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Minimum rating: ${String.format("%.1f", minRating)}",
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+        Slider(
+            value = minRating,
+            onValueChange = onRatingChanged,
+            valueRange = 0f..10f,
+            steps = 19
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SortDropdown(
+    selected: SortOption,
+    onSelected: (SortOption) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        OutlinedTextField(
+            value = selected.label,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Sort by") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded },
+            singleLine = true
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            SortOption.values().forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    onClick = {
+                        onSelected(option)
+                        expanded = false
+                    }
+                )
             }
         }
     }
@@ -85,7 +261,7 @@ fun SearchScreen(
 
 @Composable
 private fun SearchResultsGrid(
-    movies: androidx.paging.compose.LazyPagingItems<Movie>,
+    movies: List<Movie>,
     onMovieClick: (Int) -> Unit
 ) {
     LazyVerticalGrid(
@@ -94,69 +270,13 @@ private fun SearchResultsGrid(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        when (movies.loadState.refresh) {
-            is LoadState.Loading -> {
-                items(10) {
-                    MovieGridItemShimmer()
-                }
-            }
-            is LoadState.Error -> {
-                item {
-                    Text(
-                        text = "Error: ${(movies.loadState.refresh as LoadState.Error).error.message}",
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-            }
-            is LoadState.NotLoading -> {
-                if (movies.itemCount == 0) {
-                    item {
-                        Text("No results found", modifier = Modifier.padding(16.dp))
-                    }
-                } else {
-                    items(movies.itemCount) { index ->
-                        movies[index]?.let { movie ->
-                            MovieGridItem(movie = movie, onClick = { onMovieClick(movie.id) })
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MovieGridItem(movie: Movie, onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(0.7f)
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            Text(
-                text = movie.title,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 2
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "⭐ ${movie.voteAverage}",
-                style = MaterialTheme.typography.bodySmall
+        items(movies) { movie ->
+            MoviePosterCard(
+                movie = movie,
+                onClick = { onMovieClick(movie.id) },
+                modifier = Modifier.fillMaxWidth()
             )
         }
-    }
-}
-
-@Composable
-private fun MovieGridItemShimmer() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(0.7f)
-    ) {
-        Box(modifier = Modifier.fillMaxSize())
     }
 }
 

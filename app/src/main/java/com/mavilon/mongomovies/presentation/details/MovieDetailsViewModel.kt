@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mavilon.mongomovies.domain.model.Cast
 import com.mavilon.mongomovies.domain.model.MovieDetails
 import com.mavilon.mongomovies.domain.model.Review
+import com.mavilon.mongomovies.domain.model.Video
 import com.mavilon.mongomovies.domain.repository.MovieRepository
 import com.mavilon.mongomovies.domain.repository.WatchlistRepository
 import kotlinx.coroutines.flow.*
@@ -37,17 +38,20 @@ class MovieDetailsViewModel(
             val detailsResult = movieRepository.getMovieDetails(movieId)
             val creditsResult = movieRepository.getMovieCredits(movieId)
             val reviewsResult = movieRepository.getMovieReviews(movieId)
+            val videosResult = movieRepository.getMovieVideos(movieId)
             
-            if (detailsResult.isSuccess && creditsResult.isSuccess && reviewsResult.isSuccess) {
+            if (detailsResult.isSuccess && creditsResult.isSuccess && reviewsResult.isSuccess && videosResult.isSuccess) {
                 _uiState.value = MovieDetailsUiState.Success(
                     details = detailsResult.getOrThrow(),
                     cast = creditsResult.getOrThrow(),
-                    reviews = reviewsResult.getOrThrow()
+                    reviews = reviewsResult.getOrThrow(),
+                    videos = videosResult.getOrThrow()
                 )
             } else {
                 val error = detailsResult.exceptionOrNull() 
                     ?: creditsResult.exceptionOrNull() 
                     ?: reviewsResult.exceptionOrNull()
+                    ?: videosResult.exceptionOrNull()
                 _uiState.value = MovieDetailsUiState.Error(
                     error?.message ?: "Failed to load movie details"
                 )
@@ -87,7 +91,8 @@ sealed class MovieDetailsUiState {
     data class Success(
         val details: MovieDetails,
         val cast: List<Cast>,
-        val reviews: List<Review>
+        val reviews: List<Review>,
+        val videos: List<Video>
     ) : MovieDetailsUiState()
     data class Error(val message: String) : MovieDetailsUiState()
 }

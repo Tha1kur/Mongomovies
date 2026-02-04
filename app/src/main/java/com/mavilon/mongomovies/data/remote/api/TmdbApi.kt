@@ -101,6 +101,14 @@ class TmdbApi(private val client: HttpClient) {
             }
         }
     }
+
+    suspend fun getMovieVideos(id: Int): VideosResponse {
+        return safeApiCall {
+            client.get("movie/$id/videos") {
+                parameter("language", "en-US")
+            }
+        }
+    }
     
     suspend fun searchMovies(query: String, page: Int = 1): MovieListResponse {
         return safeApiCall {

@@ -1,7 +1,6 @@
 package com.mavilon.mongomovies.di
 
 import android.content.Context
-import android.util.Log
 import androidx.room.Room
 import com.mavilon.mongomovies.BuildConfig
 import com.mavilon.mongomovies.data.local.database.MovieDatabase
@@ -52,16 +51,6 @@ class AppContainer(context: Context) {
         }
     }
 
-    init {
-        val apiKey = BuildConfig.TMDB_API_KEY.trim()
-        Log.i("AppContainer", "=== TMDB API KEY DEBUG ===")
-        Log.i("AppContainer", "API key present: ${apiKey.isNotEmpty()}")
-        Log.i("AppContainer", "API key length: ${apiKey.length}")
-        Log.i("AppContainer", "API key first 10 chars: ${apiKey.take(10)}")
-        Log.i("AppContainer", "API key value: $apiKey")
-        Log.i("AppContainer", "==========================")
-    }
-    
     private val tmdbApi = TmdbApi(httpClient)
     
     private val database = Room.databaseBuilder(

@@ -12,6 +12,7 @@ import com.mavilon.mongomovies.presentation.details.MovieDetailsScreen
 import com.mavilon.mongomovies.presentation.home.HomeScreen
 import com.mavilon.mongomovies.presentation.search.SearchScreen
 import com.mavilon.mongomovies.presentation.watchlist.WatchlistScreen
+import com.mavilon.mongomovies.presentation.trailer.TrailerPlayerScreen
 
 @Composable
 fun NavGraph(
@@ -60,6 +61,20 @@ fun NavGraph(
             MovieDetailsScreen(
                 movieId = movieId,
                 container = container,
+                onBackClick = { navController.navigateUp() },
+                onTrailerClick = { youtubeKey ->
+                    navController.navigate(Screen.TrailerPlayer.createRoute(youtubeKey))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.TrailerPlayer.route,
+            arguments = listOf(navArgument("youtubeKey") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val key = backStackEntry.arguments?.getString("youtubeKey") ?: return@composable
+            TrailerPlayerScreen(
+                youtubeKey = key,
                 onBackClick = { navController.navigateUp() }
             )
         }

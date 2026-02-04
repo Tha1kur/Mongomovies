@@ -3,15 +3,47 @@ package com.mavilon.mongomovies.presentation.home
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,11 +58,11 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.SubcomposeAsyncImage
 import com.mavilon.mongomovies.di.AppContainer
 import com.mavilon.mongomovies.domain.model.Movie
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import com.mavilon.mongomovies.presentation.components.PosterImage
+import com.mavilon.mongomovies.presentation.components.PosterPlaceholder
+import com.mavilon.mongomovies.presentation.components.RatingPill
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreen(
     container: AppContainer,
@@ -43,57 +75,83 @@ fun HomeScreen(
     val upcomingMovies = viewModel.upcomingMovies.collectAsLazyPagingItems()
     val topRatedMovies = viewModel.topRatedMovies.collectAsLazyPagingItems()
     val popularMovies = viewModel.popularMovies.collectAsLazyPagingItems()
-    
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp)
-    ) {
-        // Hero Section (Always show Now Playing for now)
-        item {
-            HeroSection(movies = nowPlayingMovies, onMovieClick = onMovieClick)
+
+    val currentMovies = when (selectedCategory) {
+        MovieCategory.NOW_PLAYING -> nowPlayingMovies
+        MovieCategory.UPCOMING -> upcomingMovies
+        MovieCategory.TOP_RATED -> topRatedMovies
+        MovieCategory.POPULAR -> popularMovies
+    }
+    val isRefreshing = currentMovies.loadState.refresh is LoadState.Loading
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = isRefreshing,
+        onRefresh = {
+            nowPlayingMovies.refresh()
+            currentMovies.refresh()
         }
-        
-        // Sticky Header: Categories
-        stickyHeader {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp
-            ) {
-                ScrollableTabRow(
-                    selectedTabIndex = selectedCategory.ordinal,
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pullRefresh(pullRefreshState)
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
+            // Hero Section (Always show Now Playing for now)
+            item {
+                HeroSection(movies = nowPlayingMovies, onMovieClick = onMovieClick)
+            }
+
+            // Sticky Header: Categories
+            stickyHeader {
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    edgePadding = 16.dp,
-                    indicator = { tabPositions ->
-                        TabRowDefaults.Indicator(
-                            Modifier.tabIndicatorOffset(tabPositions[selectedCategory.ordinal])
-                        )
-                    },
-                    divider = {}
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 2.dp
                 ) {
-                    MovieCategory.values().forEach { category ->
-                        Tab(
-                            selected = selectedCategory == category,
-                            onClick = { viewModel.selectCategory(category) },
-                            text = { 
-                                Text(
-                                    text = category.name.replace("_", " "),
-                                    style = MaterialTheme.typography.titleSmall
-                                ) 
-                            }
-                        )
+                    ScrollableTabRow(
+                        selectedTabIndex = selectedCategory.ordinal,
+                        modifier = Modifier.fillMaxWidth(),
+                        edgePadding = 16.dp,
+                        indicator = { tabPositions ->
+                            TabRowDefaults.Indicator(
+                                Modifier.tabIndicatorOffset(tabPositions[selectedCategory.ordinal])
+                            )
+                        },
+                        divider = {}
+                    ) {
+                        MovieCategory.values().forEach { category ->
+                            Tab(
+                                selected = selectedCategory == category,
+                                onClick = { viewModel.selectCategory(category) },
+                                text = {
+                                    Text(
+                                        text = category.name.replace("_", " "),
+                                        style = MaterialTheme.typography.titleSmall
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
             }
+
+            when (selectedCategory) {
+                MovieCategory.NOW_PLAYING -> movieListContent(nowPlayingMovies, onMovieClick)
+                MovieCategory.UPCOMING -> movieListContent(upcomingMovies, onMovieClick)
+                MovieCategory.TOP_RATED -> movieListContent(topRatedMovies, onMovieClick)
+                MovieCategory.POPULAR -> movieListContent(popularMovies, onMovieClick)
+            }
         }
-        
-        // List Content
-        when (selectedCategory) {
-            MovieCategory.NOW_PLAYING -> movieListContent(nowPlayingMovies, onMovieClick)
-            MovieCategory.UPCOMING -> movieListContent(upcomingMovies, onMovieClick)
-            MovieCategory.TOP_RATED -> movieListContent(topRatedMovies, onMovieClick)
-            MovieCategory.POPULAR -> movieListContent(popularMovies, onMovieClick)
-        }
+
+        PullRefreshIndicator(
+            refreshing = isRefreshing,
+            state = pullRefreshState,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
     }
 }
 
@@ -142,14 +200,11 @@ private fun HeroSection(
             }
         }
     } else if (movies.loadState.refresh is LoadState.Loading) {
-        Box(
+        PosterPlaceholder(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(280.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-        }
+        )
     }
 }
 
@@ -160,11 +215,20 @@ private fun HeroMovieCard(movie: Movie, onClick: () -> Unit) {
             .fillMaxSize()
             .clickable(onClick = onClick)
     ) {
+        val backdropUrl = com.mavilon.mongomovies.util.ImageUrlBuilder.getBackdropUrl(
+            movie.backdropPath ?: movie.posterPath
+        )
         SubcomposeAsyncImage(
-            model = "https://image.tmdb.org/t/p/w780${movie.backdropPath ?: movie.posterPath}",
+            model = backdropUrl,
             contentDescription = movie.title,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            loading = {
+                PosterPlaceholder(modifier = Modifier.fillMaxSize())
+            },
+            error = {
+                PosterPlaceholder(modifier = Modifier.fillMaxSize())
+            }
         )
         
         Box(
@@ -200,6 +264,8 @@ private fun HeroMovieCard(movie: Movie, onClick: () -> Unit) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            Spacer(modifier = Modifier.height(6.dp))
+            RatingPill(rating = movie.voteAverage)
             Text(
                 text = movie.releaseDate ?: "",
                 style = MaterialTheme.typography.bodySmall,
@@ -277,49 +343,25 @@ private fun MovieCard(movie: Movie, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(160.dp)
+            .height(170.dp)
             .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
-            SubcomposeAsyncImage(
-                model = "https://image.tmdb.org/t/p/w500${movie.posterPath}",
+            PosterImage(
+                posterPath = movie.posterPath,
                 contentDescription = movie.title,
                 modifier = Modifier
-                    .width(107.dp)
+                    .width(115.dp)
                     .fillMaxHeight(),
-                contentScale = ContentScale.Crop,
-                loading = {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                    }
-                },
-                error = {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = "Error",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                shape = RoundedCornerShape(topStart = 14.dp, bottomStart = 14.dp)
             )
             
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(12.dp),
+                    .padding(14.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
@@ -332,8 +374,8 @@ private fun MovieCard(movie: Movie, onClick: () -> Unit) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = movie.overview ?: "",
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 3,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -344,10 +386,7 @@ private fun MovieCard(movie: Movie, onClick: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    Text(
-                        text = "⭐ ${String.format("%.1f", movie.voteAverage)}",
-                        style = MaterialTheme.typography.labelMedium
-                    )
+                    RatingPill(rating = movie.voteAverage)
                     Text(
                         text = movie.releaseDate ?: "",
                         style = MaterialTheme.typography.labelSmall,
@@ -364,16 +403,16 @@ private fun MovieCardShimmer() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(160.dp)
+            .height(170.dp)
             .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(14.dp)
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
-            Box(
+            PosterPlaceholder(
                 modifier = Modifier
-                    .width(107.dp)
-                    .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .width(115.dp)
+                    .fillMaxHeight(),
+                shape = RoundedCornerShape(topStart = 14.dp, bottomStart = 14.dp)
             )
             Column(
                 modifier = Modifier
@@ -382,18 +421,18 @@ private fun MovieCardShimmer() {
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Box(
+                    PosterPlaceholder(
                         modifier = Modifier
-                            .fillMaxWidth(0.7f)
-                            .height(20.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
+                            .fillMaxWidth(0.6f)
+                            .height(18.dp),
+                        shape = RoundedCornerShape(4.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Box(
+                    PosterPlaceholder(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(40.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
+                            .height(36.dp),
+                        shape = RoundedCornerShape(4.dp)
                     )
                 }
             }

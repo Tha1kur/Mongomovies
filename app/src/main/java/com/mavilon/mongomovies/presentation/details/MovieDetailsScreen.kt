@@ -1,30 +1,65 @@
 package com.mavilon.mongomovies.presentation.details
 
-import androidx.compose.foundation.layout.*
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-
-
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.BrokenImage
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import android.util.Log
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import coil.compose.SubcomposeAsyncImage
 import com.mavilon.mongomovies.di.AppContainer
+import com.mavilon.mongomovies.domain.model.Cast
+import com.mavilon.mongomovies.domain.model.Genre
+import com.mavilon.mongomovies.domain.model.MovieDetails
+import com.mavilon.mongomovies.domain.model.Review
+import com.mavilon.mongomovies.domain.model.Video
+import com.mavilon.mongomovies.presentation.components.PosterImage
+import com.mavilon.mongomovies.presentation.components.PosterPlaceholder
+import com.mavilon.mongomovies.presentation.components.RatingPill
 import com.mavilon.mongomovies.util.ImageUrlBuilder
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,7 +67,8 @@ import com.mavilon.mongomovies.util.ImageUrlBuilder
 fun MovieDetailsScreen(
     movieId: Int,
     container: AppContainer,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onTrailerClick: (String) -> Unit = {}
 ) {
     val viewModel = remember { container.createMovieDetailsViewModel(movieId) }
     val uiState by viewModel.uiState.collectAsState()
@@ -71,163 +107,13 @@ fun MovieDetailsScreen(
                 }
             }
             is MovieDetailsUiState.Success -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Backdrop Image
-                    item {
-                        val backdropUrl = ImageUrlBuilder.getBackdropUrl(state.details.backdropPath)
-                        Log.d("MovieDetails", "Backdrop URL: $backdropUrl")
-                        if (backdropUrl != null) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(backdropUrl)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Movie Backdrop",
-                                placeholder = rememberVectorPainter(Icons.Outlined.Image),
-                                error = rememberVectorPainter(Icons.Outlined.BrokenImage),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(250.dp),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-                    }
-
-                    // Movie title and info
-                    item {
-                        Column {
-                            Text(
-                                text = state.details.title,
-                                style = MaterialTheme.typography.headlineMedium
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row {
-                                Text(
-                                    text = "⭐ ${state.details.voteAverage}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = state.details.releaseDate ?: "Unknown",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = "${state.details.runtime ?: 0} min",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    }
-                    
-                    // Genres
-                    item {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(state.details.genres) { genre ->
-                                AssistChip(
-                                    onClick = { },
-                                    label = { Text(genre.name) }
-                                )
-                            }
-                        }
-                    }
-                    
-                    // Overview
-                    item {
-                        Column {
-                            Text(
-                                text = "Overview",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = state.details.overview ?: "No overview available",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                    
-                    // Cast
-                    if (state.cast.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Cast",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-                        item {
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                items(state.cast.take(10)) { castMember ->
-                                    Card(
-                                        modifier = Modifier.width(120.dp)
-                                    ) {
-                                        Column {
-                                            val castUrl = ImageUrlBuilder.getCastUrl(castMember.profilePath)
-                                            Log.d("MovieDetails", "Cast URL for ${castMember.name}: $castUrl")
-                                            AsyncImage(
-                                                model = ImageRequest.Builder(LocalContext.current)
-                                                    .data(castUrl)
-                                                    .crossfade(true)
-                                                    .build(),
-                                                contentDescription = castMember.name,
-                                                placeholder = rememberVectorPainter(Icons.Outlined.Image),
-                                                error = rememberVectorPainter(Icons.Outlined.BrokenImage),
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(160.dp),
-                                                contentScale = ContentScale.Crop
-                                            )
-                                            Column(modifier = Modifier.padding(8.dp)) {
-                                                Text(
-                                                    text = castMember.name,
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    maxLines = 1
-                                                )
-                                                Text(
-                                                    text = castMember.character ?: "",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    maxLines = 1
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Reviews
-                    if (state.reviews.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Reviews (${state.reviews.size})",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-                        items(state.reviews.take(3)) { review ->
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Text(
-                                        text = review.author,
-                                        style = MaterialTheme.typography.titleSmall
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = review.content,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 3
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                MovieDetailsContent(
+                    state = state,
+                    padding = padding,
+                    isInWatchlist = isInWatchlist,
+                    onToggleWatchlist = { viewModel.toggleWatchlist() },
+                    onTrailerClick = onTrailerClick
+                )
             }
             is MovieDetailsUiState.Error -> {
                 Box(
@@ -242,8 +128,374 @@ fun MovieDetailsScreen(
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.retry() }) {
+                        androidx.compose.material3.Button(onClick = { viewModel.retry() }) {
                             Text("Retry")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MovieDetailsContent(
+    state: MovieDetailsUiState.Success,
+    padding: PaddingValues,
+    isInWatchlist: Boolean,
+    onToggleWatchlist: () -> Unit,
+    onTrailerClick: (String) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding),
+        contentPadding = PaddingValues(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        item {
+            MovieHeader(
+                details = state.details,
+                isInWatchlist = isInWatchlist,
+                onToggleWatchlist = onToggleWatchlist
+            )
+        }
+
+        item {
+            GenreSection(genres = state.details.genres)
+        }
+
+        item {
+            OverviewSection(overview = state.details.overview)
+        }
+
+        if (state.videos.isNotEmpty()) {
+            item {
+                TrailersSection(
+                    videos = state.videos,
+                    onTrailerClick = onTrailerClick
+                )
+            }
+        }
+
+        if (state.cast.isNotEmpty()) {
+            item {
+                CastSection(cast = state.cast.take(10))
+            }
+        }
+
+        if (state.reviews.isNotEmpty()) {
+            item {
+                ReviewsSection(reviews = state.reviews.take(3))
+            }
+        }
+    }
+}
+
+@Composable
+private fun MovieHeader(
+    details: MovieDetails,
+    isInWatchlist: Boolean,
+    onToggleWatchlist: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(420.dp)
+    ) {
+        val backdropUrl = ImageUrlBuilder.getBackdropUrl(details.backdropPath ?: details.posterPath)
+        SubcomposeAsyncImage(
+            model = backdropUrl,
+            contentDescription = "${details.title} backdrop",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+            loading = { PosterPlaceholder(modifier = Modifier.fillMaxSize()) },
+            error = { PosterPlaceholder(modifier = Modifier.fillMaxSize()) }
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.Black.copy(alpha = 0.65f),
+                            Color.Black.copy(alpha = 0.25f),
+                            MaterialTheme.colorScheme.surface
+                        )
+                    )
+                )
+        )
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(20.dp),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            PosterImage(
+                posterPath = details.posterPath,
+                contentDescription = details.title,
+                modifier = Modifier
+                    .width(140.dp)
+                    .height(200.dp),
+                shape = RoundedCornerShape(16.dp)
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = details.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                details.tagline?.takeIf { it.isNotBlank() }?.let { tagline ->
+                    Text(
+                        text = tagline,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White.copy(alpha = 0.8f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    RatingPill(rating = details.voteAverage)
+                    Text(
+                        text = details.releaseDate ?: "Release TBA",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                    details.runtime?.let { runtime ->
+                        Text(
+                            text = "${runtime} min",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
+                    }
+                }
+                Text(
+                    text = "Status: ${details.status ?: "Unknown"} • Votes: ${details.voteCount}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+            }
+        }
+
+        FilledTonalIconButton(
+            onClick = onToggleWatchlist,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp),
+            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
+            )
+        ) {
+            Icon(
+                imageVector = if (isInWatchlist) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                contentDescription = if (isInWatchlist) "Remove from watchlist" else "Add to watchlist",
+                tint = if (isInWatchlist) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun OverviewSection(overview: String?) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        SectionTitle(text = "Overview")
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = overview ?: "No overview available",
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+}
+
+@Composable
+private fun CastSection(cast: List<Cast>) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        SectionTitle(text = "Cast")
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(cast) { castMember ->
+                CastCard(castMember)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CastCard(cast: Cast) {
+    Card(
+        modifier = Modifier.width(140.dp),
+        shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column {
+            val castUrl = ImageUrlBuilder.getCastUrl(cast.profilePath)
+            SubcomposeAsyncImage(
+                model = castUrl,
+                contentDescription = cast.name,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(170.dp),
+                contentScale = ContentScale.Crop,
+                loading = { PosterPlaceholder(modifier = Modifier.fillMaxSize()) },
+                error = { PosterPlaceholder(modifier = Modifier.fillMaxSize()) }
+            )
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text(
+                    text = cast.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = cast.character ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReviewsSection(reviews: List<Review>) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        SectionTitle(text = "Reviews (${reviews.size})")
+        reviews.forEach { review ->
+            ReviewCard(review)
+        }
+    }
+}
+
+@Composable
+private fun ReviewCard(review: Review) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = review.author,
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = review.content,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 5,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GenreSection(genres: List<Genre>) {
+    if (genres.isEmpty()) return
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        SectionTitle(text = "Genres")
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            genres.forEach { genre ->
+                AssistChip(
+                    onClick = { },
+                    label = { Text(genre.name) },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleLarge
+    )
+}
+
+@Composable
+private fun TrailersSection(
+    videos: List<Video>,
+    onTrailerClick: (String) -> Unit
+) {
+    val trailerItems = videos.take(3)
+
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        SectionTitle(text = "Trailers")
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(trailerItems) { video ->
+                val youtubeKey = video
+                    .takeIf { it.site.equals("YouTube", ignoreCase = true) && !it.key.isNullOrBlank() }
+                    ?.key
+
+                Card(
+                    onClick = {
+                        youtubeKey?.let(onTrailerClick)
+                    },
+                    enabled = youtubeKey != null,
+                    modifier = Modifier
+                        .width(220.dp)
+                        .height(120.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = video.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = video.type ?: "Trailer",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            if (video.official) {
+                                Text(
+                                    text = "Official",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }

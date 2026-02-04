@@ -60,3 +60,14 @@ fun ReviewDto.toDomain(): Review {
         rating = authorDetails?.rating
     )
 }
+
+fun VideoDto.toDomain(): Video {
+    return Video(
+        id = id,
+        name = name,
+        site = site,
+        key = key,
+        type = type,
+        official = official
+    )
+}
