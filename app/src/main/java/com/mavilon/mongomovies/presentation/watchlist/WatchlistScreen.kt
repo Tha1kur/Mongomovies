@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.ui.unit.Dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
@@ -24,6 +25,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,7 +34,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,13 +55,54 @@ fun WatchlistScreen(
     val viewModel = remember { container.createWatchlistViewModel() }
     val watchlistMovies by viewModel.watchlistMovies.collectAsState()
     
+    var pendingRemove by remember { mutableStateOf<Movie?>(null) }
+    var confirmClearAll by remember { mutableStateOf(false) }
+
+    if (pendingRemove != null) {
+        AlertDialog(
+            onDismissRequest = { pendingRemove = null },
+            title = { Text("Remove from watchlist?") },
+            text = { Text(pendingRemove?.title ?: "") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingRemove?.let { viewModel.removeFromWatchlist(it.id) }
+                        pendingRemove = null
+                    }
+                ) { Text("Remove") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRemove = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (confirmClearAll) {
+        AlertDialog(
+            onDismissRequest = { confirmClearAll = false },
+            title = { Text("Clear watchlist?") },
+            text = { Text("This will remove all saved movies.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.clearWatchlist()
+                        confirmClearAll = false
+                    }
+                ) { Text("Clear all") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClearAll = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("My Watchlist") },
                 actions = {
                     if (watchlistMovies.isNotEmpty()) {
-                        TextButton(onClick = { viewModel.clearWatchlist() }) {
+                        TextButton(onClick = { confirmClearAll = true }) {
                             Text("Clear All")
                         }
                     }
@@ -69,7 +114,7 @@ fun WatchlistScreen(
             EmptyWatchlistState(modifier = Modifier.padding(padding))
         } else {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+                columns = GridCells.Adaptive(minSize = 140.dp),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
@@ -81,7 +126,7 @@ fun WatchlistScreen(
                     WatchlistMovieGridCard(
                         movie = movie,
                         onClick = { onMovieClick(movie.id) },
-                        onRemove = { viewModel.removeFromWatchlist(movie.id) }
+                        onRemove = { pendingRemove = movie }
                     )
                 }
             }

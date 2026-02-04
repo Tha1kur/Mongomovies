@@ -111,6 +111,21 @@ fun SearchScreen(
                 onClearFilters = { viewModel.clearFilters() }
             )
 
+            if (uiState.query.length >= 2 && uiState.error == null) {
+                val parts = buildList {
+                    add("Showing ${uiState.results.size}")
+                    add("Order: ${uiState.sortOption.label}")
+                    uiState.yearFilter.toIntOrNull()?.let { add("Year: $it") }
+                    if (uiState.minRating > 0f) add("Min ★ ${String.format("%.1f", uiState.minRating)}")
+                }
+                Text(
+                    text = parts.joinToString("  •  "),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -245,7 +260,7 @@ private fun SortDropdown(
             value = selected.label,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Sort by") },
+            label = { Text("Order") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
             modifier = Modifier

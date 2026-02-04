@@ -185,7 +185,7 @@ data class SearchUiState(
 )
 
 enum class SortOption(val label: String) {
-    RELEVANCE("Relevance"),
+    RELEVANCE("Default"),
     RATING("Rating"),
     NEWEST("Newest")
 }
