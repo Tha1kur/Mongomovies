@@ -29,6 +29,9 @@ fun NavGraph(
                 container = container,
                 onMovieClick = { movieId ->
                     navController.navigate(Screen.MovieDetails.createRoute(movieId))
+                },
+                onSearchClick = {
+                    navController.navigate(Screen.Search.route)
                 }
             )
         }

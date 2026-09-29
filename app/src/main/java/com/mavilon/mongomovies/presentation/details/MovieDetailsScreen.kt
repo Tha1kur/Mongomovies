@@ -26,11 +26,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
@@ -44,9 +41,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
+import com.mavilon.mongomovies.R
 import com.mavilon.mongomovies.di.AppContainer
 import com.mavilon.mongomovies.domain.model.Cast
 import com.mavilon.mongomovies.domain.model.Genre
@@ -73,6 +74,7 @@ import com.mavilon.mongomovies.domain.model.Video
 import com.mavilon.mongomovies.presentation.components.PosterImage
 import com.mavilon.mongomovies.presentation.components.PosterPlaceholder
 import com.mavilon.mongomovies.presentation.components.RatingPill
+import com.mavilon.mongomovies.ui.theme.Dimensions
 import com.mavilon.mongomovies.util.ImageUrlBuilder
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,23 +91,30 @@ fun MovieDetailsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Movie Details") },
+                title = { Text("Detail") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.arrow_left),
+                            contentDescription = "Back"
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.toggleWatchlist() }) {
                         Icon(
-                            imageVector = if (isInWatchlist) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            imageVector = ImageVector.vectorResource(R.drawable.save),
                             contentDescription = if (isInWatchlist) "Remove from watchlist" else "Add to watchlist",
-                            tint = if (isInWatchlist) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            tint = if (isInWatchlist) Color.White else Color.White.copy(alpha = 0.5f)
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surface
     ) { padding ->
         when (val state = uiState) {
             is MovieDetailsUiState.Loading -> {
@@ -156,51 +165,95 @@ private fun MovieDetailsContent(
     isInWatchlist: Boolean,
     onToggleWatchlist: () -> Unit
 ) {
-    LazyColumn(
+    var selectedTab by remember { mutableStateOf(0) }
+    val tabs = listOf("About Movie", "Reviews", "Cast")
+    
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(padding),
-        contentPadding = PaddingValues(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(padding)
     ) {
-        item {
-            MovieHeader(
-                details = state.details,
-                isInWatchlist = isInWatchlist,
-                onToggleWatchlist = onToggleWatchlist
-            )
-        }
-
-        item {
-            GenreSection(genres = state.details.genres)
-        }
-
-        item {
-            OverviewSection(overview = state.details.overview)
-        }
-
-        if (state.videos.isNotEmpty()) {
-            item {
-                TrailersSection(videos = state.videos)
+        // Backdrop + Poster Hero Section
+        MovieHeroSection(
+            details = state.details,
+            isInWatchlist = isInWatchlist,
+            onToggleWatchlist = onToggleWatchlist
+        )
+        
+        // Tabs
+        TabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ) {
+            tabs.forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedTab == index,
+                    onClick = { selectedTab = index },
+                    text = { 
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleSmall
+                        ) 
+                    }
+                )
             }
         }
-
-        if (state.cast.isNotEmpty()) {
-            item {
-                CastSection(cast = state.cast.take(10))
-            }
-        }
-
-        if (state.reviews.isNotEmpty()) {
-            item {
-                ReviewsSection(reviews = state.reviews.take(3))
+        
+        // Tab Content
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(Dimensions.PaddingL),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.SectionSpacing)
+        ) {
+            when (selectedTab) {
+                0 -> { // About Movie
+                    item {
+                        Text(
+                            text = state.details.overview ?: "No overview available",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.5
+                        )
+                    }
+                }
+                1 -> { // Reviews
+                    if (state.reviews.isNotEmpty()) {
+                        items(state.reviews.take(5)) { review ->
+                            ReviewCard(review = review)
+                        }
+                    } else {
+                        item {
+                            Text(
+                                text = "No reviews available",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                2 -> { // Cast
+                    if (state.cast.isNotEmpty()) {
+                        items(state.cast.take(10)) { castMember ->
+                            CastCard(cast = castMember)
+                        }
+                    } else {
+                        item {
+                            Text(
+                                text = "No cast information available",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun MovieHeader(
+private fun MovieHeroSection(
     details: MovieDetails,
     isInWatchlist: Boolean,
     onToggleWatchlist: () -> Unit
@@ -208,8 +261,9 @@ private fun MovieHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(420.dp)
+            .height(320.dp)
     ) {
+        // Backdrop Image
         val backdropUrl = ImageUrlBuilder.getBackdropUrl(details.backdropPath ?: details.posterPath)
         SubcomposeAsyncImage(
             model = backdropUrl,
@@ -220,173 +274,133 @@ private fun MovieHeader(
             error = { PosterPlaceholder(modifier = Modifier.fillMaxSize()) }
         )
 
+        // Gradient Overlay
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color.Black.copy(alpha = 0.65f),
-                            Color.Black.copy(alpha = 0.25f),
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.4f),
                             MaterialTheme.colorScheme.surface
                         )
                     )
                 )
         )
 
+        // Floating Poster + Info
         Row(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(20.dp),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(Dimensions.PaddingL),
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.PaddingL),
+            verticalAlignment = Alignment.Bottom
         ) {
-            PosterImage(
-                posterPath = details.posterPath,
-                contentDescription = details.title,
+            // Floating Poster
+            Card(
                 modifier = Modifier
-                    .width(140.dp)
-                    .height(200.dp),
-                shape = RoundedCornerShape(16.dp)
-            )
+                    .width(110.dp)
+                    .height(160.dp),
+                shape = RoundedCornerShape(Dimensions.CornerRadiusL),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                PosterImage(
+                    posterPath = details.posterPath,
+                    contentDescription = details.title,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            // Movie Info
             Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(bottom = Dimensions.SpaceM),
+                verticalArrangement = Arrangement.spacedBy(Dimensions.SpaceS)
             ) {
                 Text(
                     text = details.title,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     color = Color.White,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                details.tagline?.takeIf { it.isNotBlank() }?.let { tagline ->
-                    Text(
-                        text = tagline,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White.copy(alpha = 0.8f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                
+                RatingPill(rating = details.voteAverage)
+                
+                // Metadata Row
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Dimensions.SpaceM),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    RatingPill(rating = details.voteAverage)
-                    Text(
-                        text = details.releaseDate ?: "Release TBA",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
-                    details.runtime?.let { runtime ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Dimensions.SpaceXS),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.calendarblank),
+                            contentDescription = "Year",
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.width(14.dp).height(14.dp)
+                        )
                         Text(
-                            text = "${runtime} min",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.9f)
+                            text = details.releaseDate?.take(4) ?: "",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                    
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                    
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Dimensions.SpaceXS),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.clock),
+                            contentDescription = "Duration",
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.width(14.dp).height(14.dp)
+                        )
+                        Text(
+                            text = "${details.runtime ?: 0} Minutes",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                    
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                    
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Dimensions.SpaceXS),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.ticket),
+                            contentDescription = "Genre",
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.width(14.dp).height(14.dp)
+                        )
+                        Text(
+                            text = details.genres.firstOrNull()?.name ?: "Action",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.7f),
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
-                Text(
-                    text = "Status: ${details.status ?: "Unknown"} • Votes: ${details.voteCount}",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White.copy(alpha = 0.85f)
-                )
             }
-        }
-
-        FilledTonalIconButton(
-            onClick = onToggleWatchlist,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp),
-            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
-            )
-        ) {
-            Icon(
-                imageVector = if (isInWatchlist) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                contentDescription = if (isInWatchlist) "Remove from watchlist" else "Add to watchlist",
-                tint = if (isInWatchlist) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
-}
-
-@Composable
-private fun OverviewSection(overview: String?) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        SectionTitle(text = "Overview")
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = overview ?: "No overview available",
-            style = MaterialTheme.typography.bodyLarge
-        )
-    }
-}
-
-@Composable
-private fun CastSection(cast: List<Cast>) {
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        SectionTitle(text = "Cast")
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(cast) { castMember ->
-                CastCard(castMember)
-            }
-        }
-    }
-}
-
-@Composable
-private fun CastCard(cast: Cast) {
-    Card(
-        modifier = Modifier.width(140.dp),
-        shape = RoundedCornerShape(14.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column {
-            val castUrl = ImageUrlBuilder.getCastUrl(cast.profilePath)
-            SubcomposeAsyncImage(
-                model = castUrl,
-                contentDescription = cast.name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(170.dp),
-                contentScale = ContentScale.Crop,
-                loading = { PosterPlaceholder(modifier = Modifier.fillMaxSize()) },
-                error = { PosterPlaceholder(modifier = Modifier.fillMaxSize()) }
-            )
-            Column(modifier = Modifier.padding(10.dp)) {
-                Text(
-                    text = cast.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = cast.character ?: "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReviewsSection(reviews: List<Review>) {
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        SectionTitle(text = "Reviews (${reviews.size})")
-        reviews.forEach { review ->
-            ReviewCard(review)
         }
     }
 }
@@ -395,262 +409,64 @@ private fun ReviewsSection(reviews: List<Review>) {
 private fun ReviewCard(review: Review) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+        shape = RoundedCornerShape(Dimensions.CornerRadiusM),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        )
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(
+            modifier = Modifier.padding(Dimensions.PaddingM),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.SpaceS)
+        ) {
             Text(
                 text = review.author,
                 style = MaterialTheme.typography.titleSmall
             )
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = review.content,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 5,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 4,
                 overflow = TextOverflow.Ellipsis
             )
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun GenreSection(genres: List<Genre>) {
-    if (genres.isEmpty()) return
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        SectionTitle(text = "Genres")
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            genres.forEach { genre ->
-                AssistChip(
-                    onClick = { },
-                    label = { Text(genre.name) },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleLarge
-    )
-}
-
-@Composable
-private fun TrailersSection(videos: List<Video>) {
-    val context = LocalContext.current
-
-    val youtubeVideos = remember(videos) {
-        videos
-            .filter { it.site.equals("YouTube", ignoreCase = true) && !it.key.isNullOrBlank() }
-            .sortedWith(
-                compareByDescending<Video> { it.official }
-                    .thenBy { it.type ?: "" }
-            )
-    }
-
-    var selectedKey by remember { mutableStateOf<String?>(youtubeVideos.firstOrNull()?.key) }
-
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        SectionTitle(text = "Trailers")
-
-        // Thumbnails/list
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(youtubeVideos.take(6)) { video ->
-                val key = video.key ?: return@items
-                val isSelected = selectedKey == key
-
-                Card(
-                    onClick = { selectedKey = key },
-                    modifier = Modifier
-                        .width(240.dp)
-                        .height(96.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.secondaryContainer
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .width(18.dp)
-                                    .height(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = video.name,
-                                style = MaterialTheme.typography.titleSmall,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = video.type ?: "Trailer",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                                if (video.official) {
-                                    Text(
-                                        text = "Official",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                if (isSelected) {
-                                    Text(
-                                        text = "Now playing",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Inline player (kept on details screen)
-        selectedKey?.let { key ->
-            InlineYoutubePlayer(
-                youtubeKey = key,
-                playlistKeys = youtubeVideos.mapNotNull { it.key },
-                onOpenExternal = {
-                    val watchUrl = "https://www.youtube.com/watch?v=$key"
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(watchUrl)))
-                }
-            )
-        }
-    }
-}
-
-@Composable
-@SuppressLint("SetJavaScriptEnabled")
-private fun InlineYoutubePlayer(
-    youtubeKey: String,
-    playlistKeys: List<String>,
-    onOpenExternal: () -> Unit
-) {
-    // Autoplay is often blocked unless muted. This is the closest to “video-first” UX without native deps.
-    // The playlist parameter enables continuous play across the provided keys.
-    val playlistParam = playlistKeys.distinct().joinToString(",")
-    val embedUrl = "https://www.youtube.com/embed/$youtubeKey?autoplay=1&playsinline=1&mute=1&modestbranding=1&rel=0&playlist=$playlistParam"
-
-    var isLoading by remember(youtubeKey) { mutableStateOf(true) }
-
-    Card(
+private fun CastCard(cast: Cast) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(16f / 9f),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .padding(vertical = Dimensions.SpaceS),
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.PaddingM),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
+        Card(
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
+                .width(60.dp)
+                .height(60.dp),
+            shape = RoundedCornerShape(Dimensions.CornerRadiusM)
         ) {
-            AndroidView(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(14.dp)),
-                factory = { ctx ->
-                    WebView(ctx).apply {
-                        setBackgroundColor(AndroidColor.BLACK)
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.mediaPlaybackRequiresUserGesture = false
-                        webChromeClient = WebChromeClient()
-                        webViewClient = object : WebViewClient() {
-                            override fun onPageFinished(view: WebView?, url: String?) {
-                                isLoading = false
-                            }
-                        }
-                        loadUrl(embedUrl)
-                    }
-                },
-                update = { webView ->
-                    val current = webView.url
-                    if (current == null || !current.contains(youtubeKey)) {
-                        isLoading = true
-                        webView.loadUrl(embedUrl)
-                    }
-                }
+            PosterImage(
+                posterPath = cast.profilePath,
+                contentDescription = cast.name,
+                modifier = Modifier.fillMaxSize()
             )
-
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp),
-                horizontalAlignment = Alignment.End
-            ) {
-                TextButton(
-                    onClick = onOpenExternal,
-                    modifier = Modifier
-                        .background(
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                            shape = RoundedCornerShape(10.dp)
-                        )
-                ) {
-                    Text("Open")
-                }
-                Text(
-                    text = "Autoplays muted • tap video to unmute",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                    modifier = Modifier
-                        .background(
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.65f),
-                            shape = RoundedCornerShape(10.dp)
-                        )
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                )
-            }
+        }
+        
+        Column(
+            verticalArrangement = Arrangement.spacedBy(Dimensions.SpaceXS)
+        ) {
+            Text(
+                text = cast.name,
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                text = cast.character ?: "Unknown",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

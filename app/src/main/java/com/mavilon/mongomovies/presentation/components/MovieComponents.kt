@@ -19,8 +19,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -39,7 +39,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
+import com.mavilon.mongomovies.R
 import com.mavilon.mongomovies.domain.model.Movie
+import com.mavilon.mongomovies.ui.theme.Dimensions
 import com.mavilon.mongomovies.util.ImageUrlBuilder
 
 @Composable
@@ -52,14 +54,14 @@ fun RatingPill(
         modifier = modifier
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .padding(horizontal = Dimensions.SpaceM, vertical = Dimensions.SpaceXS + 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.SpaceXS + 2.dp)
     ) {
         Icon(
-            imageVector = Icons.Default.Star,
+            imageVector = ImageVector.vectorResource(R.drawable.star),
             contentDescription = "Rating",
-            tint = MaterialTheme.colorScheme.primary,
+            tint = Color(0xFFFFC107),
             modifier = Modifier
                 .clip(CircleShape)
         )
@@ -73,7 +75,7 @@ fun RatingPill(
 @Composable
 fun PosterPlaceholder(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(12.dp)
+    shape: Shape = RoundedCornerShape(Dimensions.CornerRadiusM)
 ) {
     val shimmerColors = listOf(
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
@@ -107,7 +109,7 @@ fun PosterImage(
     posterPath: String?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(12.dp),
+    shape: Shape = RoundedCornerShape(Dimensions.CornerRadiusM),
     contentScale: ContentScale = ContentScale.Crop
 ) {
     val posterUrl = ImageUrlBuilder.getPosterUrl(posterPath)
@@ -138,7 +140,7 @@ fun MoviePosterCard(
     Card(
         onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(Dimensions.CornerRadiusM),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Box(
@@ -167,10 +169,10 @@ fun MoviePosterCard(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(12.dp)
+                    .padding(Dimensions.PaddingM)
             ) {
                 RatingPill(rating = movie.voteAverage)
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Dimensions.SpaceS))
                 Text(
                     text = movie.title,
                     style = MaterialTheme.typography.titleSmall,

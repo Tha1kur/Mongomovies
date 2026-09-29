@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Color
 val BackgroundPrimary = Color(0xFF1F1D2B)
 val BackgroundSecondary = Color(0xFF252836)
 val SurfaceColor = Color(0xFF252836)
+val CardBackground = Color(0xFF252836)
 
 // Accent Colors
 val AccentBlue = Color(0xFF12CDD9)
@@ -26,4 +27,5 @@ val SuccessGreen = Color(0xFF51CF66)
 
 // Overlay & Divider
 val OverlayDark = Color(0xCC000000) // 80% opacity
+val OverlaySubtle = Color(0x40000000) // 25% opacity
 val DividerColor = Color(0xFF3A3F47)

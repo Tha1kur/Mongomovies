@@ -3,28 +3,27 @@ package com.mavilon.mongomovies.ui.theme
 import androidx.compose.ui.unit.dp
 
 object Dimensions {
-    // Spacing
-    val SpaceExtraSmall = 4.dp
-    val SpaceSmall = 8.dp
-    val SpaceMedium = 12.dp
-    val SpaceDefault = 16.dp
-    val SpaceLarge = 20.dp
-    val SpaceExtraLarge = 24.dp
+    // Spacing (4dp grid system)
+    val SpaceXS = 4.dp
+    val SpaceS = 8.dp
+    val SpaceM = 12.dp
+    val SpaceL = 16.dp
+    val SpaceXL = 24.dp
     val SpaceXXL = 32.dp
     
-    // Padding
-    val PaddingSmall = 8.dp
-    val PaddingMedium = 12.dp
-    val PaddingDefault = 16.dp
-    val PaddingLarge = 20.dp
-    val PaddingExtraLarge = 24.dp
+    // Section Spacing (vertical rhythm between major sections)
+    val SectionSpacing = 20.dp
     
-    // Corner Radius
-    val CornerRadiusSmall = 4.dp
-    val CornerRadiusMedium = 8.dp
-    val CornerRadiusLarge = 12.dp
-    val CornerRadiusExtraLarge = 16.dp
-    val CornerRadiusXXL = 24.dp
+    // Padding (aligned with spacing)
+    val PaddingS = 8.dp
+    val PaddingM = 12.dp
+    val PaddingL = 16.dp
+    val PaddingXL = 24.dp
+    
+    // Corner Radius (simplified to 3 values)
+    val CornerRadiusS = 8.dp
+    val CornerRadiusM = 12.dp
+    val CornerRadiusL = 16.dp
     
     // Card & Component Sizes
     val MovieCardWidth = 120.dp
@@ -33,10 +32,10 @@ object Dimensions {
     val FeaturedCardHeight = 210.dp
     
     // Icon Sizes
-    val IconSizeSmall = 16.dp
-    val IconSizeMedium = 20.dp
-    val IconSizeLarge = 24.dp
-    val IconSizeExtraLarge = 32.dp
+    val IconSizeS = 16.dp
+    val IconSizeM = 20.dp
+    val IconSizeL = 24.dp
+    val IconSizeXL = 32.dp
     
     // Bottom Navigation
     val BottomNavHeight = 64.dp

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,13 +17,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -49,24 +48,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.SubcomposeAsyncImage
+import com.mavilon.mongomovies.R
 import com.mavilon.mongomovies.di.AppContainer
 import com.mavilon.mongomovies.domain.model.Movie
 import com.mavilon.mongomovies.presentation.components.PosterImage
 import com.mavilon.mongomovies.presentation.components.PosterPlaceholder
-import com.mavilon.mongomovies.presentation.components.RatingPill
+import com.mavilon.mongomovies.presentation.components.MoviePosterCard
+import com.mavilon.mongomovies.ui.theme.Dimensions
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreen(
     container: AppContainer,
-    onMovieClick: (Int) -> Unit
+    onMovieClick: (Int) -> Unit,
+    onSearchClick: () -> Unit
 ) {
     val viewModel = remember { container.createHomeViewModel() }
     val selectedCategory by viewModel.selectedCategory.collectAsState()
@@ -98,27 +104,77 @@ fun HomeScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 16.dp)
+            contentPadding = PaddingValues(bottom = Dimensions.PaddingL)
         ) {
-            // Hero Section (Always show Now Playing for now)
+            // Header Text
+            item {
+                Text(
+                    text = "What do you want to watch?",
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                    modifier = Modifier.padding(
+                        start = Dimensions.PaddingL,
+                        end = Dimensions.PaddingL,
+                        top = Dimensions.PaddingM,
+                        bottom = Dimensions.PaddingM
+                    )
+                )
+            }
+
+            // Search Bar (Reduced Height)
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Dimensions.PaddingL)
+                        .height(48.dp)
+                        .clickable(onClick = onSearchClick),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = Dimensions.PaddingM),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Search",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.search),
+                            contentDescription = "Search",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(Dimensions.PaddingM))
+            }
+
+            // Featured / Hero Section (Reduced Height)
             item {
                 HeroSection(movies = nowPlayingMovies, onMovieClick = onMovieClick)
             }
 
-            // Sticky Header: Categories
+            // Category Tabs (Reduced Top Spacing)
             stickyHeader {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 2.dp
+                    color = MaterialTheme.colorScheme.surface
                 ) {
                     ScrollableTabRow(
                         selectedTabIndex = selectedCategory.ordinal,
                         modifier = Modifier.fillMaxWidth(),
-                        edgePadding = 16.dp,
+                        edgePadding = Dimensions.PaddingL,
                         indicator = { tabPositions ->
                             TabRowDefaults.SecondaryIndicator(
-                                Modifier.tabIndicatorOffset(tabPositions[selectedCategory.ordinal])
+                                Modifier
+                                    .tabIndicatorOffset(tabPositions[selectedCategory.ordinal])
+                                    .height(2.dp),
+                                color = MaterialTheme.colorScheme.primary
                             )
                         },
                         divider = {}
@@ -129,8 +185,13 @@ fun HomeScreen(
                                 onClick = { viewModel.selectCategory(category) },
                                 text = {
                                     Text(
-                                        text = category.name.replace("_", " "),
-                                        style = MaterialTheme.typography.titleSmall
+                                        text = when (category) {
+                                            MovieCategory.NOW_PLAYING -> "Now playing"
+                                            MovieCategory.UPCOMING -> "Upcoming"
+                                            MovieCategory.TOP_RATED -> "Top rated"
+                                            MovieCategory.POPULAR -> "Popular"
+                                        },
+                                        style = MaterialTheme.typography.labelLarge
                                     )
                                 }
                             )
@@ -139,11 +200,12 @@ fun HomeScreen(
                 }
             }
 
+            // Movie Grid Content (Compact)
             when (selectedCategory) {
-                MovieCategory.NOW_PLAYING -> movieListContent(nowPlayingMovies, onMovieClick)
-                MovieCategory.UPCOMING -> movieListContent(upcomingMovies, onMovieClick)
-                MovieCategory.TOP_RATED -> movieListContent(topRatedMovies, onMovieClick)
-                MovieCategory.POPULAR -> movieListContent(popularMovies, onMovieClick)
+                MovieCategory.NOW_PLAYING -> movieGridContent(nowPlayingMovies, onMovieClick)
+                MovieCategory.UPCOMING -> movieGridContent(upcomingMovies, onMovieClick)
+                MovieCategory.TOP_RATED -> movieGridContent(topRatedMovies, onMovieClick)
+                MovieCategory.POPULAR -> movieGridContent(popularMovies, onMovieClick)
             }
         }
 
@@ -161,176 +223,65 @@ private fun HeroSection(
     movies: LazyPagingItems<Movie>,
     onMovieClick: (Int) -> Unit
 ) {
-    // Only show if we have items
-    if (movies.itemCount > 0) {
-        val pagerState = rememberPagerState(pageCount = { minOf(movies.itemCount, 5) })
-        
-        Column(modifier = Modifier.fillMaxWidth()) {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp)
-            ) { page ->
-                movies[page]?.let { movie ->
-                    HeroMovieCard(movie = movie, onClick = { onMovieClick(movie.id) })
-                }
-            }
-            
-            // Pager Indicator
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                repeat(minOf(movies.itemCount, 5)) { iteration ->
-                    val color = if (pagerState.currentPage == iteration) 
-                        MaterialTheme.colorScheme.primary 
-                    else 
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                    Box(
-                        modifier = Modifier
-                            .padding(4.dp)
-                            .clip(CircleShape)
-                            .background(color)
-                            .size(6.dp)
-                    )
-                }
-            }
-        }
-    } else if (movies.loadState.refresh is LoadState.Loading) {
-        PosterPlaceholder(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(280.dp)
-        )
+    val heroMovies = remember(movies.itemCount) {
+        (0 until minOf(5, movies.itemCount)).mapNotNull { movies[it] }
     }
-}
 
-@Composable
-private fun HeroMovieCard(movie: Movie, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clickable(onClick = onClick)
-    ) {
-        val backdropUrl = com.mavilon.mongomovies.util.ImageUrlBuilder.getBackdropUrl(
-            movie.backdropPath ?: movie.posterPath
-        )
-        SubcomposeAsyncImage(
-            model = backdropUrl,
-            contentDescription = movie.title,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-            loading = {
-                PosterPlaceholder(modifier = Modifier.fillMaxSize())
-            },
-            error = {
-                PosterPlaceholder(modifier = Modifier.fillMaxSize())
-            }
-        )
-        
+    if (heroMovies.isEmpty()) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)),
-                        startY = 200f
-                    )
-                )
-        )
-        
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(16.dp)
+                .fillMaxWidth()
+                .height(280.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Featured",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.primary)
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = movie.title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            RatingPill(rating = movie.voteAverage)
-            Text(
-                text = movie.releaseDate ?: "",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.8f)
-            )
+            CircularProgressIndicator()
         }
+        return
     }
-}
 
-private fun LazyListScope.movieListContent(
-    movies: LazyPagingItems<Movie>,
-    onMovieClick: (Int) -> Unit
-) {
-    // Add padding at the top of the list
-    item { Spacer(modifier = Modifier.height(16.dp)) }
+    val pagerState = rememberPagerState(pageCount = { heroMovies.size })
 
-    when (movies.loadState.refresh) {
-        is LoadState.Loading -> {
-            items(5) {
-                MovieCardShimmer()
-                Spacer(modifier = Modifier.height(16.dp))
-            }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = Dimensions.PaddingM)
+    ) {
+        // Hero Carousel
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 70.dp),
+            pageSpacing = 16.dp
+        ) { page ->
+            val movie = heroMovies[page]
+            FeaturedMovieCard(
+                movie = movie,
+                ranking = page + 1,
+                onClick = { onMovieClick(movie.id) }
+            )
         }
-        is LoadState.Error -> {
-            item {
-                ErrorView(
-                    message = (movies.loadState.refresh as LoadState.Error).error.message ?: "Unknown error",
-                    onRetry = { movies.retry() }
+
+        // Page Indicators
+        Spacer(modifier = Modifier.height(Dimensions.PaddingM))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(heroMovies.size) { index ->
+                Box(
+                    modifier = Modifier
+                        .size(if (pagerState.currentPage == index) 8.dp else 6.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (pagerState.currentPage == index)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        )
                 )
-            }
-        }
-        is LoadState.NotLoading -> {
-            if (movies.itemCount == 0) {
-                item { EmptyView() }
-            } else {
-                items(movies.itemCount) { index ->
-                    movies[index]?.let { movie ->
-                        MovieCard(movie = movie, onClick = { onMovieClick(movie.id) })
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                }
-                
-                when (movies.loadState.append) {
-                    is LoadState.Loading -> {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
-                            }
-                        }
-                    }
-                    is LoadState.Error -> {
-                        item {
-                            Text(
-                                text = "Error loading more",
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(16.dp)
-                            )
-                        }
-                    }
-                    else -> {}
+                if (index < heroMovies.size - 1) {
+                    Spacer(modifier = Modifier.width(6.dp))
                 }
             }
         }
@@ -338,132 +289,149 @@ private fun LazyListScope.movieListContent(
 }
 
 @Composable
-private fun MovieCard(movie: Movie, onClick: () -> Unit) {
+private fun FeaturedMovieCard(
+    movie: Movie,
+    ranking: Int,
+    onClick: () -> Unit
+) {
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(170.dp)
-            .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(14.dp),
+            .height(280.dp),
+        shape = RoundedCornerShape(Dimensions.CornerRadiusL),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Row(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Poster Image (Full)
             PosterImage(
                 posterPath = movie.posterPath,
                 contentDescription = movie.title,
-                modifier = Modifier
-                    .width(115.dp)
-                    .fillMaxHeight(),
-                shape = RoundedCornerShape(topStart = 14.dp, bottomStart = 14.dp)
+                modifier = Modifier.fillMaxSize()
             )
-            
-            Column(
+
+            // Ranking Number Overlay (Large, Prominent)
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .padding(start = 12.dp, bottom = 12.dp),
+                contentAlignment = Alignment.BottomStart
             ) {
-                Column {
-                    Text(
-                        text = movie.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = movie.overview ?: "",
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    RatingPill(rating = movie.voteAverage)
-                    Text(
-                        text = movie.releaseDate ?: "",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = ranking.toString(),
+                    style = MaterialTheme.typography.displayLarge.copy(
+                        fontWeight = FontWeight.Black,
+                        fontSize = 96.sp
+                    ),
+                    color = Color.Black.copy(alpha = 0.2f)
+                )
             }
         }
     }
 }
 
-@Composable
-private fun MovieCardShimmer() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(170.dp)
-            .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(14.dp)
-    ) {
-        Row(modifier = Modifier.fillMaxSize()) {
-            PosterPlaceholder(
-                modifier = Modifier
-                    .width(115.dp)
-                    .fillMaxHeight(),
-                shape = RoundedCornerShape(topStart = 14.dp, bottomStart = 14.dp)
-            )
-            Column(
-                modifier = Modifier
-                    .padding(12.dp)
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    PosterPlaceholder(
-                        modifier = Modifier
-                            .fillMaxWidth(0.6f)
-                            .height(18.dp),
-                        shape = RoundedCornerShape(4.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+private fun LazyListScope.movieGridContent(
+    movies: LazyPagingItems<Movie>,
+    onMovieClick: (Int) -> Unit
+) {
+    // Calculate number of rows (2 columns per row)
+    val itemCount = movies.itemCount
+    val rowCount = (itemCount + 1) / 2
+    
+    // Add movie items as rows
+    items(rowCount) { rowIndex ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Dimensions.PaddingL),
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.PaddingM)
+        ) {
+            // First column
+            val firstIndex = rowIndex * 2
+            if (firstIndex < itemCount) {
+                movies[firstIndex]?.let { movie ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        MoviePosterCard(
+                            movie = movie,
+                            onClick = { onMovieClick(movie.id) }
+                        )
+                    }
+                } ?: Box(modifier = Modifier.weight(1f)) {
                     PosterPlaceholder(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(36.dp),
-                        shape = RoundedCornerShape(4.dp)
+                            .height(200.dp)
                     )
                 }
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+
+            // Second column
+            val secondIndex = firstIndex + 1
+            if (secondIndex < itemCount) {
+                movies[secondIndex]?.let { movie ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        MoviePosterCard(
+                            movie = movie,
+                            onClick = { onMovieClick(movie.id) }
+                        )
+                    }
+                } ?: Box(modifier = Modifier.weight(1f)) {
+                    PosterPlaceholder(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+        
+        // Add spacing between rows
+        if (rowIndex < rowCount - 1) {
+            Spacer(modifier = Modifier.height(Dimensions.PaddingM))
+        }
+    }
+
+    // Loading state
+    if (movies.loadState.append is LoadState.Loading) {
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Dimensions.PaddingL),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
         }
     }
-}
 
-@Composable
-private fun ErrorView(message: String, onRetry: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.Warning,
-            contentDescription = "Error",
-            modifier = Modifier.size(48.dp),
-            tint = MaterialTheme.colorScheme.error
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "Error: $message", style = MaterialTheme.typography.bodyMedium)
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetry) { Text("Retry") }
-    }
-}
-
-@Composable
-private fun EmptyView() {
-    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-        Text("No movies found")
+    // Error state
+    if (movies.loadState.refresh is LoadState.Error) {
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Dimensions.PaddingL),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Dimensions.SpaceM)
+                ) {
+                    Text(
+                        text = "Failed to load movies",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Button(onClick = { movies.refresh() }) {
+                        Text("Retry")
+                    }
+                }
+            }
+        }
     }
 }

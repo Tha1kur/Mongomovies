@@ -4,24 +4,24 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -33,10 +33,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.mavilon.mongomovies.R
 import com.mavilon.mongomovies.di.AppContainer
 import com.mavilon.mongomovies.domain.model.Movie
-import com.mavilon.mongomovies.presentation.components.MoviePosterCard
+import com.mavilon.mongomovies.presentation.components.PosterImage
+import com.mavilon.mongomovies.ui.theme.Dimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,18 +97,7 @@ fun WatchlistScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Column {
-                        Text("My Watchlist")
-                        if (watchlistMovies.isNotEmpty()) {
-                            Text(
-                                text = "${watchlistMovies.size} movies",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                },
+                title = { Text("Watch list") },
                 actions = {
                     if (watchlistMovies.isNotEmpty()) {
                         TextButton(onClick = { confirmClearAll = true }) {
@@ -116,20 +111,17 @@ fun WatchlistScreen(
         if (watchlistMovies.isEmpty()) {
             EmptyWatchlistState(modifier = Modifier.padding(padding))
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 140.dp),
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(Dimensions.PaddingL),
+                verticalArrangement = Arrangement.spacedBy(Dimensions.PaddingL)
             ) {
                 items(watchlistMovies, key = { it.id }) { movie ->
-                    WatchlistMovieGridCard(
+                    WatchlistMovieCard(
                         movie = movie,
-                        onClick = { onMovieClick(movie.id) },
-                        onRemove = { pendingRemove = movie }
+                        onClick = { onMovieClick(movie.id) }
                     )
                 }
             }
@@ -137,34 +129,135 @@ fun WatchlistScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun WatchlistMovieGridCard(
+private fun WatchlistMovieCard(
     movie: Movie,
-    onClick: () -> Unit,
-    onRemove: () -> Unit
+    onClick: () -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-        MoviePosterCard(
-            movie = movie,
-            onClick = onClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(0.68f)
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(140.dp),
+        shape = RoundedCornerShape(Dimensions.CornerRadiusM),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         )
-
-        Surface(
+    ) {
+        Row(
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(8.dp),
-            shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-            tonalElevation = 2.dp
+                .fillMaxSize()
+                .padding(Dimensions.PaddingM),
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.PaddingM)
         ) {
-            IconButton(onClick = onRemove) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Remove"
+            // Poster Image
+            Card(
+                modifier = Modifier
+                    .width(90.dp)
+                    .height(120.dp),
+                shape = RoundedCornerShape(Dimensions.CornerRadiusM)
+            ) {
+                PosterImage(
+                    posterPath = movie.posterPath,
+                    contentDescription = movie.title,
+                    modifier = Modifier.fillMaxSize()
                 )
+            }
+
+            // Movie Info Column
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(Dimensions.SpaceS)
+            ) {
+                // Title
+                Text(
+                    text = movie.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                // Rating Row
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Dimensions.SpaceXS),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = ImageVector.vectorResource(R.drawable.star),
+                        contentDescription = "Rating",
+                        tint = Color(0xFFFFC107),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = String.format("%.1f", movie.voteAverage),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color(0xFFFFC107)
+                    )
+                }
+
+                // Metadata Column
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(Dimensions.SpaceXS)
+                ) {
+                    // Genre
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Dimensions.SpaceXS),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.ticket),
+                            contentDescription = "Genre",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "Action",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    // Year
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Dimensions.SpaceXS),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.calendarblank),
+                            contentDescription = "Year",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = movie.releaseDate?.take(4) ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Duration
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Dimensions.SpaceXS),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.clock),
+                            contentDescription = "Duration",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "139 minutes",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
@@ -178,22 +271,21 @@ private fun EmptyWatchlistState(modifier: Modifier = Modifier) {
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
+            verticalArrangement = Arrangement.spacedBy(Dimensions.PaddingM)
         ) {
             Text(
                 text = "🎬",
                 style = MaterialTheme.typography.displayLarge
             )
-            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "No saved films yet",
-                style = MaterialTheme.typography.titleLarge
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Find a movie you love and tap the heart to save it for later.",
-                style = MaterialTheme.typography.bodyMedium,
+                text = "Your watchlist is empty",
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "Add movies to your watchlist",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
         }
     }
