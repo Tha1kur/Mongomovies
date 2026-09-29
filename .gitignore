@@ -14,3 +14,19 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Project storage cleanup: generated files and machine-specific configuration
+**/build/
+.kotlin/
+.idea/
+.vscode/
+*.apk
+*.aab
+*.apks
+*.jks
+*.keystore
+keystore.properties
+.env
+.env.*
+!.env.example
+*.zip
